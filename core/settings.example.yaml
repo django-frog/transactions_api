@@ -4,6 +4,11 @@ redis:
   username: default
   password: password
 
+  tracked_days_key: "system:tracked_days"
+  virtual_clock_key: "system:virtual_clock"
+  # Key Prefixes (The "Namespace")
+  agg_prefix: "agg"
+
 app:
   csv_path: app/sorted_transactions_1_month.csv
   batch_size: 10

@@ -35,7 +35,11 @@ class RedisSettings(BaseModel):
     username: str
     password: str
     decode_responses: bool = True
-
+    # Discovery Keys
+    tracked_days_key: str = "system:tracked_days"
+    virtual_clock_key: str = "system:virtual_clock"
+    # Key Prefix
+    agg_prefix: str = "agg"
 
 class AppSettings(BaseModel):
     redis: RedisSettings
