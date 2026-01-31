@@ -1,0 +1,9 @@
+redis:
+  host: redis-host
+  port: redist-port
+  username: default
+  password: password
+
+app:
+  csv_path: app/sorted_transactions_1_month.csv
+  batch_size: 10
