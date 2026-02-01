@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy your application
 COPY app ./app
+COPY app/settings.yaml /app/settings.yaml
 
 # Make sure Python can import `app.*`
 ENV PYTHONPATH=/app
