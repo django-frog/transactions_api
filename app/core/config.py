@@ -41,14 +41,20 @@ class RedisSettings(BaseModel):
     # Key Prefix
     agg_prefix: str = "agg"
 
+class MongoSettings(BaseModel):
+    uri: str
+    database: str
+    collection: str
+
 class AppSettings(BaseModel):
     redis: RedisSettings
+    mongodb: MongoSettings
     csv_path: Path
     batch_size: int = 10
 
 
 def load_settings() -> AppSettings:
-    base_dir = Path(__file__).parent
+    base_dir = Path(__file__).parent.parent.parent # Adjusted for standard app/core/ layout
     config_path = base_dir / "settings.yaml"
 
     if not config_path.exists():
@@ -64,6 +70,7 @@ def load_settings() -> AppSettings:
 
     return AppSettings(
         redis=RedisSettings(**raw["redis"]),
+        mongodb=MongoSettings(**raw["mongodb"]),
         csv_path=Path(raw["app"]["csv_path"]),
         batch_size=raw["app"]["batch_size"],
     )

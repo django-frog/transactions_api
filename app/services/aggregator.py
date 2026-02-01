@@ -96,6 +96,8 @@ class RedisAggregationWorker:
 
         await pipe.execute()
         logger.info("Aggregated %d transactions. Clock: %s", processed_count, self.local_virtual_clock)
+        # Give other tasks (like the Persistor) a chance to run
+        await asyncio.sleep(0.01)
 
     async def _ensure_group(self) -> None:
         try:
