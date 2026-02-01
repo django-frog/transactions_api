@@ -21,19 +21,34 @@ def setup_logging() -> None:
                     "class": "logging.StreamHandler",
                     "formatter": "default",
                 },
+                "file": {
+                    "class": "logging.FileHandler",
+                    "filename": "/logs/app.log",
+                    "formatter": "default",
+                },
             },
             "root": {
                 "level": "INFO",
-                "handlers": ["default"],
+                "handlers": ["default", "file"],
             },
             "loggers": {
-                # enable detailed logs only for our importer
                 "app.services.importer": {
                     "level": "DEBUG",
-                    "handlers": ["default"],
+                    "handlers": ["default", "file"],
+                    "propagate": False,
+                },
+                "app.services.aggregator": {
+                    "level": "INFO",
+                    "handlers": ["default", "file"],
+                    "propagate": False,
+                },
+                "app.services.persistor": {
+                    "level": "INFO",
+                    "handlers": ["default", "file"],
                     "propagate": False,
                 },
             },
+
         }
     )
 

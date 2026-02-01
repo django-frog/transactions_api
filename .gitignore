@@ -2,3 +2,4 @@ __pycache__
 .env
 app/settings.yaml
 app/settings.old.yaml
+logs/

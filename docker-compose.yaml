@@ -30,5 +30,9 @@ services:
       - .env
     restart: unless-stopped
 
+    volumes:
+      - ./logs:/logs
+
+
 volumes:
   mongo_data:
