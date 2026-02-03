@@ -69,7 +69,7 @@ async def lifespan(app: FastAPI):
     persistor = MongoPersistenceWorker(
         redis=redis_persistor,
         mongo_collection=mongo_writer_col,
-        retention_days=3,
+        retention_days=7,
         interval_seconds=10
     )
 
