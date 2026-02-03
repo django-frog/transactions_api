@@ -23,6 +23,16 @@ This system allows for the ingestion of high-throughput transaction data via CSV
 * **Database:** MongoDB (Motor async driver)
 * **Containerization:** Docker & Docker Compose
 
+## 🛠️ Data Pre-processing: Temporal Sorting
+
+A critical architectural decision was made to **pre-sort the input CSV by timestamp** before ingestion. 
+
+### Why Sorting is Mandatory:
+* **Monotonic Virtual Clock:** The system uses a "Virtual Clock" derived from transaction timestamps to determine archival boundaries. If data were processed out of order, the clock could jump forward, causing valid "recent" transactions to be incorrectly flagged as historical.
+
+* **Deterministic Archival:** Sorting ensures that the 7-day "Hot Data" window moves forward consistently. 
+
+
 ## 🏗️ Architecture
 
 ### 1. The Components
@@ -51,17 +61,53 @@ To optimize for $O(1)$ access and simple atomic increments, we use the following
 ### Steps
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/django-frog/transactions_api.git](https://github.com/django-frog/transactions_api.git)
+    git clone https://github.com/django-frog/transactions_api.git
     cd transactions_api
     ```
 
-2.  **Start the services:**
+2.  **Create environment file:**
+
+    The project expects a ``.env`` file.
+
+    An example file is provided:
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    Edit .env if needed to match your local environment.
+
+3.  **Create application settings file:**
+
+    The application loads its configuration from a YAML file.
+
+    An example file is provided:
+
+    ```bash
+    cp settings.example.yaml settings.yaml
+    ```
+
+    Make sure settings.yaml is correctly configured before starting the system.
+
+    > ⚠️ The application will not start if settings.yaml is missing.
+
+4.  **Start the services:**
     ```bash
     docker-compose up --build
     ```
-    *This will start Redis, MongoDB, and the FastAPI application.*
+ 
+     > **Note:**
+    This project uses Docker Compose v2 (docker compose), not the legacy docker-compose binary.
+ 
 
-3.  **Access the API:**
+    This will start:
+    * Redis
+    * MongoDB
+    * FastAPI application (including background workers).
+
+
+
+5.  **Access the API:**
     * **Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
     * **Stats Endpoint:** `GET /stats?from_date=2026-01-01&to_date=2026-01-30`
 
