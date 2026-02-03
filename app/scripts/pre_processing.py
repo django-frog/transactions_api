@@ -34,7 +34,7 @@ def sort_transactions_csv(
 
 
 if __name__ == "__main__":
-    src = Path("../transactions_1_month.csv")
-    dst = Path("../sorted_transactions_1_month.csv")
+    src = Path("./app/transactions_1_month.csv")
+    dst = Path("./app/sorted_transactions_1_month.csv")
 
     sort_transactions_csv(src, dst)
