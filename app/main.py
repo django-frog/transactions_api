@@ -52,7 +52,7 @@ def setup_logging() -> None:
                 },
                 "app.services.persistor": {
                     "level": "INFO",
-                    "handlers": ["file"],
+                    "handlers": ["file" , 'default'],
                     "propagate": False,
                 },
             },
