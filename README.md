@@ -65,9 +65,11 @@ To optimize for $O(1)$ access and simple atomic increments, we use the following
     cd transactions_api
     ```
 
-2.  **Create environment file:**
+2. **Configure Environment Variables**
 
-    The project expects a ``.env`` file.
+    The application is configured entirely via a single .env file. Create this file in the project root.
+
+    > **No YAML file is required anymore.**
 
     An example file is provided:
 
@@ -75,25 +77,37 @@ To optimize for $O(1)$ access and simple atomic increments, we use the following
     cp .env.example .env
     ```
 
-    Edit .env if needed to match your local environment.
+    Ensure your .env contains the following: 
 
-3.  **Create application settings file:**
-
-    The application loads its configuration from a YAML file.
-
-    An example file is provided:
-
-    ```bash
-    cp settings.example.yaml settings.yaml
+    ```env
+    # --- Infrastructure ---
+    REDIS_HOST=redis
+    REDIS_PORT=6379
+    REDIS_PASSWORD=
+    
+    MONGODB_URI=mongodb://mongo:27017
+    MONGODB_DATABASE=fintech_db
+    MONGODB_COLLECTION=daily_stats
+    
+    # --- Application Settings ---
+    CSV_PATH=app/transactions_1_month.csv
+    BATCH_SIZE=50
+    RETENTION_DAYS=7
+    
+    # --- Logging & Verbosity ---
+    # Options: DEBUG (detailed), INFO (clean summary), WARNING, ERROR
+    LOG_LEVEL=INFO
     ```
 
-    Make sure settings.yaml is correctly configured before starting the system.
+    > **Note:** If running via Docker Compose, use the service names redis and mongo as hostnames
 
-    > ⚠️ The application will not start if settings.yaml is missing.
 
-4.  **Start the services:**
+3.  **Start the services:**
+    
+    The system uses Docker Compose to orchestrate the API, Redis, and MongoDB.
+    
     ```bash
-    docker-compose up --build
+    docker compose up --build
     ```
  
      > **Note:**
@@ -107,12 +121,50 @@ To optimize for $O(1)$ access and simple atomic increments, we use the following
 
 
 
-5.  **Access the API:**
+4.  **Access the API:**
     * **Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
     * **Stats Endpoint:** `GET /stats?from_date=2026-01-01&to_date=2026-01-30`
 
-## 🧪 Implementation Details & Trade-offs
+    * **API Response Format:**
 
-* **Floating Point Math:** The requirements specified `amount` as a float. In a real-world production Fintech environment, `Decimal` or integer-based cents would be used to strictly avoid IEEE 754 precision errors.
-* **Concurrency:** The system explicitly yields control (`await asyncio.sleep(0.01)`) inside heavy loops to prevent CPU starvation and ensure all background workers get fair access to the event loop.
-* **Idempotency:** The MongoDB persistence uses `$inc` (increment) logic. This allows the system to be restarted or replay data without "resetting" historical totals; it will simply add to them.
+        The /stats endpoint returns a nested JSON object:
+        ```json
+        {
+          "data": {
+            "2026-01-01": {
+              "deposits": {
+                "paypal": 343.4,
+                "crypto": 893,
+                "wire": 234
+              },
+              "withdrawals": {
+                "visa": 342,
+                "crypto": 475,
+                "wire": 879
+              }
+            },
+            "2026-01-02": {
+              "deposits": {
+                "visa": 53.4,
+                "crypto": 893,
+                "wire": 234
+              },
+              "withdrawals": {
+                "paypal": 50,
+                "visa": 475,
+                "wire": 879,
+                "crypto": 948
+              }
+            }
+          }
+        }
+
+## 🔍 Logging and Monitoring
+The application uses Python's standard logging module for observability, configured via `LOG_LEVEL` in .env (options: DEBUG, INFO, WARNING, ERROR; default INFO).
+
+- **Verbosity Balance**: At INFO level, logs focus on key events (e.g., "Imported X transactions," "Aggregated to day Y," "Dumped Z days with W aggregates to MongoDB") without per-transaction spam—ensuring the terminal is informative during startup/operation but not overwhelming.
+- **Outputs**: Logs to console (visible in Docker) and a mounted volume (/logs/app.log for persistence).
+- **Error Handling**: Errors (e.g., invalid CSV rows) are logged and skipped to maintain uptime; critical failures halt the worker with traceback.
+
+For production, integrate with tools like ELK or Prometheus—here, kept simple per task scope.
+

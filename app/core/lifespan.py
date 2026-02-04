@@ -12,11 +12,15 @@ from app.services.persistor import MongoPersistenceWorker
 from app.infrastructure.redis import create_redis_client
 from app.infrastructure.mongo import create_mongo_client
 
-logger = logging.getLogger(__name__)
+import logging
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger = logging.getLogger(__name__)
+
+    logger.info("🚀 System starting (Batch Size: %d)", settings.batch_size)
+
     redis_params = {
         "host": settings.redis.host,
         "port": settings.redis.port,

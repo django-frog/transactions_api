@@ -1,33 +1,17 @@
-from dotenv import load_dotenv
-load_dotenv()
-
-from pathlib import Path
 import os
-import re
-import yaml
+from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic import BaseModel
 
 
-_ENV_PATTERN = re.compile(r"\$\{([A-Z0-9_]+)\}")
+# Load .env for local / docker parity
+load_dotenv()
 
 
-def _expand_env(value: str) -> str:
-    def replacer(match: re.Match) -> str:
-        var = match.group(1)
-        return os.environ.get(var, "")
-    return _ENV_PATTERN.sub(replacer, value)
-
-
-def _expand_tree(obj):
-    if isinstance(obj, dict):
-        return {k: _expand_tree(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_expand_tree(v) for v in obj]
-    if isinstance(obj, str):
-        return _expand_env(obj)
-    return obj
-
+# ---------------------------------------------------------
+# Public models
+# ---------------------------------------------------------
 
 class RedisSettings(BaseModel):
     host: str
@@ -35,45 +19,87 @@ class RedisSettings(BaseModel):
     username: str
     password: str
     decode_responses: bool = True
+
     # Discovery Keys
     tracked_days_key: str = "system:tracked_days"
     virtual_clock_key: str = "system:virtual_clock"
+
     # Key Prefix
     agg_prefix: str = "agg"
+
 
 class MongoSettings(BaseModel):
     uri: str
     database: str
     collection: str
 
+
 class AppSettings(BaseModel):
     redis: RedisSettings
     mongodb: MongoSettings
     csv_path: Path
     batch_size: int = 10
+    log_level : str = 'INFO'
+
+
+# ---------------------------------------------------------
+# Loader
+# ---------------------------------------------------------
+
+def _get_bool(value: str | None, default: bool) -> bool:
+    if value is None:
+        return default
+    return value.lower() in ("1", "true", "yes", "on")
 
 
 def load_settings() -> AppSettings:
-    base_dir = Path(__file__).parent.parent.parent # Adjusted for standard app/core/ layout
-    config_path = base_dir / "settings.yaml"
-
-    if not config_path.exists():
-        raise RuntimeError(
-            f"Missing settings file: {config_path}. "
-            "Create it from settings.example.yaml"
+    try:
+        redis = RedisSettings(
+            host=os.environ["REDIS_HOST"],
+            port=int(os.environ.get("REDIS_PORT", 6379)),
+            username=os.environ.get("REDIS_USERNAME", ""),
+            password=os.environ.get("REDIS_PASSWORD", ""),
+            decode_responses=_get_bool(
+                os.environ.get("REDIS_DECODE_RESPONSES"),
+                True,
+            ),
+            tracked_days_key=os.environ.get(
+                "REDIS_TRACKED_DAYS_KEY",
+                "system:tracked_days",
+            ),
+            virtual_clock_key=os.environ.get(
+                "REDIS_VIRTUAL_CLOCK_KEY",
+                "system:virtual_clock",
+            ),
+            agg_prefix=os.environ.get(
+                "REDIS_AGG_PREFIX",
+                "agg",
+            ),
         )
 
-    with config_path.open("r") as f:
-        raw = yaml.safe_load(f)
+        mongodb = MongoSettings(
+            uri=os.environ["MONGODB_URI"],
+            database=os.environ["MONGODB_DATABASE"],
+            collection=os.environ["MONGODB_COLLECTION"],
+        )
 
-    raw = _expand_tree(raw)
+        return AppSettings(
+            redis=redis,
+            mongodb=mongodb,
+            csv_path=Path(
+                os.environ.get(
+                    "CSV_PATH",
+                    "app/sorted_transactions_1_month.csv",
+                )
+            ),
+            batch_size=int(os.environ.get("BATCH_SIZE", 10)),
+            log_level=os.environ.get("LOG_LEVEL", "INFO")
+        )
 
-    return AppSettings(
-        redis=RedisSettings(**raw["redis"]),
-        mongodb=MongoSettings(**raw["mongodb"]),
-        csv_path=Path(raw["app"]["csv_path"]),
-        batch_size=raw["app"]["batch_size"],
-    )
+    except KeyError as exc:
+        raise RuntimeError(
+            f"Missing required environment variable: {exc.args[0]}"
+        ) from None
 
 
 settings = load_settings()

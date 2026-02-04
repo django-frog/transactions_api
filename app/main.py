@@ -14,6 +14,9 @@ LOG_DIR = "/logs"
 def setup_logging() -> None:
     # Make sure log directory exists (important for Docker)
     os.makedirs(LOG_DIR, exist_ok=True)
+    
+    # Get level from env (upper for safety)
+    log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
 
     logging.config.dictConfig(
         {
@@ -36,23 +39,23 @@ def setup_logging() -> None:
                 },
             },
             "root": {
-                "level": "INFO",
+                "level": log_level,  # Now dynamic from env
                 "handlers": ["default", "file"],
             },
             "loggers": {
                 "app.services.importer": {
-                    "level": "DEBUG",
-                    "handlers": ["file"],
+                    "level": log_level if log_level == 'DEBUG' else "INFO",
+                    "handlers": ["file", "default"],  # Add console for visibility
                     "propagate": False,
                 },
                 "app.services.aggregator": {
-                    "level": "INFO",
+                    "level": log_level,
                     "handlers": ["file"],
                     "propagate": False,
                 },
                 "app.services.persistor": {
-                    "level": "INFO",
-                    "handlers": ["file" , 'default'],
+                    "level": log_level,
+                    "handlers": ["file", "default"],  # Ensure dump messages hit console
                     "propagate": False,
                 },
             },

@@ -14,7 +14,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application and data
 COPY app ./app
-COPY app/settings.yaml /app/settings.yaml
 
 # Copy and prepare the entrypoint script
 COPY entrypoint.sh /app/entrypoint.sh
