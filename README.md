@@ -33,6 +33,26 @@ A critical architectural decision was made to **pre-sort the input CSV by timest
 * **Deterministic Archival:** Sorting ensures that the 7-day "Hot Data" window moves forward consistently. 
 
 
+## 📉 Handling Out-of-Order (OOO) Data
+
+In real-world production systems, data is rarely sequential. Here is how the system handles—and can be improved to handle—Out-of-Order events.
+
+### 1. Current Design: Idempotent Self-Healing
+The current architecture is **eventually consistent** by design.
+* **The Logic:** If a transaction for "Jan 1st" arrives on "Jan 10th" (after archival), the Aggregator simply re-creates the daily key in Redis. 
+* **The Fix:** Because the `Persistor` uses MongoDB's **`$inc` (atomic increment)** operator, it doesn't overwrite historical data; it merges the late-arriving values into the existing record during its next cycle.
+* **Trade-off:** There is a small latency window where the API might show slightly incomplete data until the next Persistor run (every 10 seconds).
+
+### 2. Proposed Strategy: Watermark + Buffer TTL
+To eliminate the "latency window" and make the system more robust against extreme network delays, we propose a **Watermark Deletion Strategy**:
+
+* **Decoupled Deletion:** Instead of the Persistor explicitly deleting keys from Redis after a migration, we use **Redis Native Expiry (TTL)**.
+* **The Buffer:** Every time a transaction is added to a daily Redis key, we set its expiration to:
+  `TTL = (Transaction Day X) + 7 Days (Retention) + 24 Hours (Safety Buffer)`.
+* **Benefit:** Even if the Persistor has already migrated "Jan 1st" to MongoDB, the key remains in Redis for an extra 24 hours. Any late-arriving data will be updated in both places, ensuring the API always reflects the true total without waiting for the next archival cycle.
+
+
+
 ## 🏗️ Architecture
 
 ### 1. The Components
